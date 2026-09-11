@@ -3,6 +3,7 @@
 #include "module/detector/green_light.hpp"
 #include "module/detector/lightbar.hpp"
 #include "module/detector/rune.hpp"
+#include "module/detector/yolo_detection.hpp"
 #include "utility/math/angle.hpp"
 #include "utility/math/corners_optimizor.hpp"
 #include "utility/robot/armor.hpp"
@@ -24,6 +25,7 @@ struct Detector::Impl {
 
     ArmorDetection armor_detection;
     GreenLightFinder green_light_finder;
+    YoloDetection yolo_detection;
 
     bool detect_rune = true;
     RuneDetector rune_detector;
@@ -116,11 +118,19 @@ struct Detector::Impl {
         auto locator_result = green_light_finder.initialize(yaml["green_light_filter"]);
         if (!locator_result.has_value()) return std::unexpected { locator_result.error() };
 
+        if (auto yolo = yaml["yolo_detection"]; yolo && !yolo.IsNull()) {
+            auto yolo_result = yolo_detection.initialize(yolo);
+            if (!yolo_result.has_value()) return std::unexpected { yolo_result.error() };
+        }
+
         return { };
     }
 
     auto detect(const cv::Mat& mat) noexcept -> Result {
         auto result = Result { };
+
+        auto yolo_boxes      = yolo_detection.sync_detect(mat);
+        result.yolo_detections = std::move(yolo_boxes);
 
         if (detect_rune) {
             const auto elements = rune_detector.detect(mat);

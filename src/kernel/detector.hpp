@@ -1,5 +1,6 @@
 #pragma once
 
+#include "module/detector/yolo_detection.hpp"
 #include "utility/pimpl.hpp"
 #include "utility/robot/armor.hpp"
 #include "utility/robot/rune.hpp"
@@ -27,6 +28,7 @@ public:
         std::vector<RuneBullseye> bullseyes;
 
         std::vector<cv::Rect2i> areas;
+        std::vector<detector::YoloDetection::Detection> yolo_detections;
     };
 
     auto initialize(const YAML::Node&) noexcept -> std::expected<void, std::string>;

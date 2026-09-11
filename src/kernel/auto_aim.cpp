@@ -65,6 +65,13 @@ struct AutoAim::Impl {
             auto model_location = std::filesystem::path { util::Parameters::share_location() }
                 / std::filesystem::path { config["model_location"].as<std::string>() };
             config["model_location"] = model_location.string();
+
+            if (auto yolo = config["yolo_detection"]; yolo && !yolo.IsNull()) {
+                auto yolo_location = std::filesystem::path { util::Parameters::share_location() }
+                    / std::filesystem::path { yolo["model_location"].as<std::string>() };
+                yolo["model_location"] = yolo_location.string();
+            }
+
             handle_result("detector", detector.initialize(config));
         }
         {
@@ -207,6 +214,14 @@ struct AutoAim::Impl {
         }
         for (const auto& roi : result.areas) {
             visual.draw_later(roi);
+        }
+        for (const auto& detection : result.yolo_detections) {
+            visual.draw_later(detection.rect);
+            visual.draw_later(Canvas::Text {
+                .content  = std::format("{} {:.2f}", detection.name(), detection.confidence),
+                .top_left = detection.rect.tl() + cv::Point2i { 0, -15 },
+                .color    = kCyan,
+            });
         }
         visual.draw_later(result.armors);
         visual.draw_later(result.green_light);

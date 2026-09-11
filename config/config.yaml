@@ -44,6 +44,16 @@ detector:
     min_circularity: 0.6
     max_aspect_ratio: 1.5
 
+  yolo_detection:
+    enable: true
+    model_location: "detect_yolo_v1.xml"
+    infer_device: "CPU"
+    input_rows: 640
+    input_cols: 640
+    min_confidence: 0.3
+    score_threshold: 0.5
+    nms_threshold: 0.45
+
 tracker:
   fallback_color: BLUE
   timeout_seconds: 1.5

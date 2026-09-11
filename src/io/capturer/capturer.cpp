@@ -510,7 +510,7 @@ private:
         const auto compensated_timestamp = output_frame->image_reception_timestamp - imu_delay_;
         output_frame->exposure_timestamp = compensated_timestamp;
 
-        if (imu_buffer_) {
+        if (0 && imu_buffer_) {
             if (auto imu_snapshot = imu_buffer_->pop_host(compensated_timestamp)) {
                 fill_and_emit(output_frame, imu_snapshot->orientation, imu_snapshot->gyro_body);
             } else {
