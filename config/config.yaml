@@ -54,6 +54,19 @@ detector:
     score_threshold: 0.5
     nms_threshold: 0.45
 
+  hrnet_keypoint:
+    enable: true
+    model_location: "hrnet_heatmap_18_v1.xml"
+    infer_device: "CPU"
+    input_rows: 256
+    input_cols: 256
+    mean: [123.675, 116.28, 103.53]
+    std: [58.395, 57.12, 57.375]
+    bbox_padding: 1.25
+    bbox_class_id: 2            # 0=pillar, 1=exchange, 2=全部
+    visibility_score_threshold: 0.60
+    min_visible_keypoints: 5
+
 tracker:
   fallback_color: BLUE
   timeout_seconds: 1.5

@@ -26,6 +26,7 @@ struct Detector::Impl {
     ArmorDetection armor_detection;
     GreenLightFinder green_light_finder;
     YoloDetection yolo_detection;
+    HrnetKeypoint hrnet_keypoint;
 
     bool detect_rune = true;
     RuneDetector rune_detector;
@@ -123,6 +124,11 @@ struct Detector::Impl {
             if (!yolo_result.has_value()) return std::unexpected { yolo_result.error() };
         }
 
+        if (auto hrnet = yaml["hrnet_keypoint"]; hrnet && !hrnet.IsNull()) {
+            auto hrnet_result = hrnet_keypoint.initialize(hrnet);
+            if (!hrnet_result.has_value()) return std::unexpected { hrnet_result.error() };
+        }
+
         return { };
     }
 
@@ -131,6 +137,8 @@ struct Detector::Impl {
 
         auto yolo_boxes      = yolo_detection.sync_detect(mat);
         result.yolo_detections = std::move(yolo_boxes);
+
+        result.keypoint_results = hrnet_keypoint.sync_detect(mat, result.yolo_detections);
 
         if (detect_rune) {
             const auto elements = rune_detector.detect(mat);

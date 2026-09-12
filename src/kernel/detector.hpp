@@ -1,5 +1,6 @@
 #pragma once
 
+#include "module/detector/hrnet_keypoint.hpp"
 #include "module/detector/yolo_detection.hpp"
 #include "utility/pimpl.hpp"
 #include "utility/robot/armor.hpp"
@@ -29,6 +30,7 @@ public:
 
         std::vector<cv::Rect2i> areas;
         std::vector<detector::YoloDetection::Detection> yolo_detections;
+        std::vector<detector::HrnetKeypoint::KeypointResult> keypoint_results;
     };
 
     auto initialize(const YAML::Node&) noexcept -> std::expected<void, std::string>;

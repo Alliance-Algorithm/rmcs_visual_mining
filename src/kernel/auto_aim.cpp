@@ -72,6 +72,12 @@ struct AutoAim::Impl {
                 yolo["model_location"] = yolo_location.string();
             }
 
+            if (auto hrnet = config["hrnet_keypoint"]; hrnet && !hrnet.IsNull()) {
+                auto hrnet_location = std::filesystem::path { util::Parameters::share_location() }
+                    / std::filesystem::path { hrnet["model_location"].as<std::string>() };
+                hrnet["model_location"] = hrnet_location.string();
+            }
+
             handle_result("detector", detector.initialize(config));
         }
         {
@@ -222,6 +228,21 @@ struct AutoAim::Impl {
                 .top_left = detection.rect.tl() + cv::Point2i { 0, -15 },
                 .color    = kCyan,
             });
+        }
+        for (const auto& kp_result : result.keypoint_results) {
+            for (const auto& kp : kp_result.keypoints) {
+                visual.draw_later(Canvas::Point {
+                    .origin = { cvRound(kp.point.x), cvRound(kp.point.y) },
+                    .radius = 3,
+                    .color  = kMagenta,
+                });
+                visual.draw_later(Canvas::Text {
+                    .content =
+                        std::format("{} {:.2f}", detector::HrnetKeypoint::kKeypointNames[kp.index], kp.score),
+                    .top_left = { cvRound(kp.point.x), cvRound(kp.point.y) - 12 },
+                    .color    = kMagenta,
+                });
+            }
         }
         visual.draw_later(result.armors);
         visual.draw_later(result.green_light);
