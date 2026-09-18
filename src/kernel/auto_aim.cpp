@@ -237,8 +237,8 @@ struct AutoAim::Impl {
                     .color  = kMagenta,
                 });
                 visual.draw_later(Canvas::Text {
-                    .content =
-                        std::format("{} {:.2f}", detector::HrnetKeypoint::kKeypointNames[kp.index], kp.score),
+                    .content = std::format(
+                        "{} {:.2f}", detector::HrnetKeypoint::kKeypointNames[kp.index], kp.score),
                     .top_left = { cvRound(kp.point.x), cvRound(kp.point.y) - 12 },
                     .color    = kMagenta,
                 });
@@ -273,6 +273,44 @@ struct AutoAim::Impl {
             armor3ds = std::move(result);
         }
         visual.publish(armor3ds, "visible_armors");
+
+        /// [] 科技核心总装位姿：对 exchange 类目标做关键点 PnP（照搬参考仓库管线）
+        {
+            const detector::HrnetKeypoint::KeypointResult* target = nullptr;
+            for (const auto& item : result.keypoint_results) {
+                if (item.class_id != 1) continue;
+                if (target == nullptr || item.keypoints.size() > target->keypoints.size()) {
+                    target = &item;
+                }
+            }
+            if (target == nullptr && !result.keypoint_results.empty()) {
+                target = &*std::ranges::max_element(
+                    result.keypoint_results, [](const auto& lhs, const auto& rhs) {
+                        return lhs.keypoints.size() < rhs.keypoints.size();
+                    });
+            }
+
+            if (target != nullptr) {
+                auto indices = std::vector<std::size_t> { };
+                auto points  = std::vector<cv::Point2f> { };
+                indices.reserve(target->keypoints.size());
+                points.reserve(target->keypoints.size());
+                for (const auto& keypoint : target->keypoints) {
+                    indices.push_back(keypoint.index);
+                    points.push_back(keypoint.point);
+                }
+
+                if (const auto transform = estimator.estimate_tech_core(indices, points)) {
+                    visual.publish(*transform, "tech_core");
+                    visual.draw_later(Canvas::Text {
+                        .content  = std::format("core reproj {:.3f}px",
+                            estimator.addition().tech_core_reprojection_error),
+                        .top_left = { 10, 580 },
+                        .color    = kYellow,
+                    });
+                }
+            }
+        }
 
         /// [] 跟踪目标，跟踪器里面维护了可见机器人的 EKF 状态
         auto trackable = Trackable::Unique { };

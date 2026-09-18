@@ -5,8 +5,10 @@
 #include "utility/math/corners_optimizor.hpp"
 #include "utility/math/outpost.hpp"
 #include "utility/math/reprojection.hpp"
+#include "utility/math/solve_pnp/keypoint_pnp.hpp"
 #include "utility/math/solve_pnp/outpost_distance_optimizer.hpp"
 #include "utility/math/solve_pnp/pnp_solution.hpp"
+#include "utility/robot/tech_core.hpp"
 #include "utility/serializable.hpp"
 
 #include <algorithm>
@@ -28,6 +30,11 @@ struct PoseEstimator::Impl {
         bool fixed_outpost_pitch;
         bool fixed_normal_pitch;
 
+        bool keypoint_use_ransac;
+        double keypoint_ransac_reprojection_error_px;
+        double keypoint_ransac_confidence;
+        int keypoint_ransac_iterations;
+
         constexpr static std::tuple metas {
             // clang-format off
             &Config::distance_optimizer, "distance_optimizer",
@@ -35,7 +42,12 @@ struct PoseEstimator::Impl {
             &Config::outpost_armor_thickness, "outpost_armor_thickness",
 
             &Config::fixed_outpost_pitch, "fixed_outpost_pitch",
-            &Config::fixed_normal_pitch, "fixed_normal_pitch"
+            &Config::fixed_normal_pitch, "fixed_normal_pitch",
+
+            &Config::keypoint_use_ransac, "keypoint_use_ransac",
+            &Config::keypoint_ransac_reprojection_error_px, "keypoint_ransac_reprojection_error_px",
+            &Config::keypoint_ransac_confidence, "keypoint_ransac_confidence",
+            &Config::keypoint_ransac_iterations, "keypoint_ransac_iterations"
             // clang-format on
         };
     };
@@ -45,6 +57,7 @@ struct PoseEstimator::Impl {
     CameraFeature camera_feature;
 
     RobustPnpSolution pnp_solution { };
+    KeypointPnpSolution tech_core_pnp { };
     OutpostDistanceOptimizer outpost_optimizer { };
     AdjacencyLightbarFinder adjacency_finder { };
 
@@ -60,6 +73,13 @@ struct PoseEstimator::Impl {
         pnp_solution.input.fixed_outpost_pitch = config.fixed_outpost_pitch;
         pnp_solution.input.fixed_normal_pitch  = config.fixed_normal_pitch;
 
+        tech_core_pnp.input.object_points = kTechCoreObjectPoints;
+        tech_core_pnp.input.use_ransac    = config.keypoint_use_ransac;
+        tech_core_pnp.input.ransac_reprojection_error_px =
+            config.keypoint_ransac_reprojection_error_px;
+        tech_core_pnp.input.ransac_confidence = config.keypoint_ransac_confidence;
+        tech_core_pnp.input.ransac_iterations = config.keypoint_ransac_iterations;
+
         return { };
     } catch (const std::exception& e) {
         return std::unexpected { e.what() };
@@ -67,6 +87,7 @@ struct PoseEstimator::Impl {
 
     auto sync_camera_feature() {
         pnp_solution.input.feature     = camera_feature;
+        tech_core_pnp.input.camera     = camera_feature;
         outpost_optimizer.input.camera = camera_feature;
         adjacency_finder.set_camera_feature(camera_feature);
     }
@@ -272,6 +293,23 @@ struct PoseEstimator::Impl {
         return armor3ds;
     }
 
+    auto solve_tech_core(std::span<const std::size_t> indices, std::span<const cv::Point2f> points)
+        -> std::optional<Transform> {
+        addition.tech_core.reset();
+        addition.tech_core_reprojection_error = 0.0;
+
+        auto& input         = tech_core_pnp.input;
+        input.indices       = indices;
+        input.points        = points;
+        input.object_points = kTechCoreObjectPoints;
+
+        if (!tech_core_pnp.solve()) return std::nullopt;
+
+        addition.tech_core                    = tech_core_pnp.result.transform;
+        addition.tech_core_reprojection_error = tech_core_pnp.result.reprojection_error;
+        return addition.tech_core;
+    }
+
     auto make_point2d(const Point3d& point_odom) const -> std::optional<Point2d> {
         const auto t = camera_feature.translation.make<Eigen::Vector3d>();
         const auto q = camera_feature.orientation.make<Eigen::Quaterniond>();
@@ -305,6 +343,11 @@ auto PoseEstimator::estimate_armor(const std::vector<Armor2d>& armors) const -> 
 auto PoseEstimator::estimate_armor(const std::vector<Armor2d>& armors, const cv::Mat& image) const
     -> Armor3ds {
     return pimpl->solve_armor(armors, image);
+}
+
+auto PoseEstimator::estimate_tech_core(std::span<const std::size_t> indices,
+    std::span<const cv::Point2f> points) -> std::optional<Transform> {
+    return pimpl->solve_tech_core(indices, points);
 }
 
 auto PoseEstimator::addition() -> const Addition& { return pimpl->addition; }

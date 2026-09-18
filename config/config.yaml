@@ -101,6 +101,12 @@ pose_estimator:
 
   outpost_armor_thickness: 0.022
 
+  # 科技核心总装（exchange_12pt）关键点 PnP，对齐参考仓库 PnPEstimator
+  keypoint_use_ransac: true
+  keypoint_ransac_reprojection_error_px: 3.0
+  keypoint_ransac_confidence: 0.99
+  keypoint_ransac_iterations: 100
+
 visualization:
   publishable: true
   drawable: true

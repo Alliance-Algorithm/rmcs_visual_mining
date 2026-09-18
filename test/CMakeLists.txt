@@ -95,6 +95,18 @@ target_link_libraries(
     yaml-cpp::yaml-cpp
 )
 
+# Keypoint pnp
+ament_add_gtest(
+    test_keypoint_pnp
+    ${TEST_DIR}/keypoint_pnp.cpp
+    ${RMCS_SRC_DIR}/utility/math/solve_pnp/keypoint_pnp.cpp
+    ${RMCS_SRC_DIR}/utility/math/camera.cpp
+)
+target_link_libraries(
+    test_keypoint_pnp
+    ${OpenCV_LIBRARIES}
+)
+
 # Static TF
 ament_add_gtest(
     test_static_tf

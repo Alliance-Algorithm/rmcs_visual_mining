@@ -66,3 +66,5 @@ config/unreal.yaml
 config/unreal.yml
 config/config.override.yaml
 config/config.override.yml
+
+RM2026-Engineer-Assembly-Algorithm/*

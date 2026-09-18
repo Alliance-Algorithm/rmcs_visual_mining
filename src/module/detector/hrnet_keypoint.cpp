@@ -28,9 +28,8 @@ auto third_point(const cv::Point2f& a, const cv::Point2f& b) noexcept -> cv::Poi
     return b + cv::Point2f { -direction.y, direction.x };
 }
 
-auto bbox_to_square_affine(
-    const cv::Rect2i& bbox, const cv::Size2i& input_size, float padding) noexcept
-    -> std::pair<cv::Mat, cv::Mat> {
+auto bbox_to_square_affine(const cv::Rect2i& bbox, const cv::Size2i& input_size,
+    float padding) noexcept -> std::pair<cv::Mat, cv::Mat> {
     const auto x1 = static_cast<float>(bbox.x);
     const auto y1 = static_cast<float>(bbox.y);
     const auto x2 = static_cast<float>(bbox.x + bbox.width);
@@ -41,7 +40,7 @@ auto bbox_to_square_affine(
 
     const auto input_w = static_cast<float>(input_size.width);
     const auto input_h = static_cast<float>(input_size.height);
-    const auto aspect   = input_w / input_h;
+    const auto aspect  = input_w / input_h;
     if (scale.x > scale.y * aspect) {
         scale.y = scale.x / aspect;
     } else {
@@ -58,7 +57,7 @@ auto bbox_to_square_affine(
     src[2] = third_point(src[0], src[1]);
 
     const auto dst_center = cv::Point2f { input_w * 0.5f, input_h * 0.5f };
-    auto dst = std::array<cv::Point2f, 3> {
+    auto dst              = std::array<cv::Point2f, 3> {
         dst_center,
         dst_center + cv::Point2f { -0.5f * input_w, 0.0f },
         cv::Point2f { },
@@ -158,9 +157,8 @@ struct HrnetKeypoint::Impl {
         }
     }
 
-    auto sync_detect(
-        const cv::Mat& image, std::span<const YoloDetection::Detection> detections) noexcept
-        -> KeypointResults {
+    auto sync_detect(const cv::Mat& image,
+        std::span<const YoloDetection::Detection> detections) noexcept -> KeypointResults {
         if (!initialized) return { };
         if (image.empty()) return { };
 
@@ -193,15 +191,16 @@ struct HrnetKeypoint::Impl {
 
             auto blob = cv::dnn::blobFromImage(crop, 1.0, { }, { }, false);
 
-            auto input_tensor = ov::Tensor { ov::element::f32, input_layout.shape(input_dimensions) };
+            auto input_tensor =
+                ov::Tensor { ov::element::f32, input_layout.shape(input_dimensions) };
             std::memcpy(input_tensor.data(), blob.ptr(), blob.total() * sizeof(float));
 
             auto request = openvino_model.create_infer_request();
             request.set_input_tensor(input_tensor);
             request.infer();
 
-            auto output_tensor       = request.get_output_tensor();
-            const auto* data         = output_tensor.data<float>();
+            auto output_tensor = request.get_output_tensor();
+            const auto* data   = output_tensor.data<float>();
 
             const auto heatmap_w = TechCoreHrnet18::kHeatmapWidth;
             const auto heatmap_h = TechCoreHrnet18::kHeatmapHeight;
@@ -230,11 +229,9 @@ struct HrnetKeypoint::Impl {
                 auto px = static_cast<float>(x);
                 auto py = static_cast<float>(y);
                 if (1 <= x && x < heatmap_w - 1 && 1 <= y && y < heatmap_h - 1) {
-                    px += sign(
-                              heatmap[y * heatmap_w + x + 1] - heatmap[y * heatmap_w + x - 1])
+                    px += sign(heatmap[y * heatmap_w + x + 1] - heatmap[y * heatmap_w + x - 1])
                         * 0.25f;
-                    py += sign(
-                              heatmap[(y + 1) * heatmap_w + x] - heatmap[(y - 1) * heatmap_w + x])
+                    py += sign(heatmap[(y + 1) * heatmap_w + x] - heatmap[(y - 1) * heatmap_w + x])
                         * 0.25f;
                 }
 
@@ -254,6 +251,7 @@ struct HrnetKeypoint::Impl {
 
             results.push_back(KeypointResult {
                 .bbox      = detection.rect,
+                .class_id  = detection.class_id,
                 .keypoints = std::move(keypoints),
             });
         }
@@ -267,9 +265,8 @@ auto HrnetKeypoint::initialize(const YAML::Node& yaml) noexcept
     return pimpl->initialize(yaml);
 }
 
-auto HrnetKeypoint::sync_detect(
-    const cv::Mat& image, std::span<const YoloDetection::Detection> detections) noexcept
-    -> KeypointResults {
+auto HrnetKeypoint::sync_detect(const cv::Mat& image,
+    std::span<const YoloDetection::Detection> detections) noexcept -> KeypointResults {
     return pimpl->sync_detect(image, detections);
 }
 

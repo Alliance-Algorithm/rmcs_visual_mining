@@ -19,8 +19,18 @@ class HrnetKeypoint {
 
 public:
     static constexpr std::array<std::string_view, 12> kKeypointNames = {
-        "TL", "TR", "BL", "BR", "ring",
-        "light_BR", "light_TR", "shell_R", "shell_M", "shell_L", "light_TL", "light_BL",
+        "TL",
+        "TR",
+        "BL",
+        "BR",
+        "ring",
+        "light_BR",
+        "light_TR",
+        "shell_R",
+        "shell_M",
+        "shell_L",
+        "light_TL",
+        "light_BL",
     };
 
     struct Keypoint {
@@ -30,6 +40,7 @@ public:
     };
     struct KeypointResult {
         cv::Rect2i bbox;
+        int class_id = -1;
         std::vector<Keypoint> keypoints;
     };
     using KeypointResults = std::vector<KeypointResult>;
